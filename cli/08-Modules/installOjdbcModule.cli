@@ -1,0 +1,2 @@
+#En cada host ejecutar el comando
+module add --name=com.oracle.jdbc --resources=/opt/servers/Workshop/Cli/8-Modules/ojdbc8.jar --slot=ojdbc8 --dependencies=javax.api,javax.transaction.api
