@@ -1,0 +1,39 @@
+---
+- name: Install Local JBoss EAP 7 Local Domain
+  hosts: localhost
+  vars:
+    JBOSS_HOME: /home/scanales/Downloads/jboss-eap-7.1/
+    IP_BINDING: 127.0.0.1
+  become: true
+  tasks:
+  - name: Running Installation
+    shell: |
+      # CLEAN UP
+      echo 'CLEAN UP'
+      killall java
+      rm -rf domain-*
+      # CP BASE DIR
+      echo 'CP BASE DIR...' 
+      cp -r domain/ domain-dc/
+      cp -r domain/ domain-slave01/
+      cp -r domain/ domain-slave02/
+      # CREATE ADMIN
+      echo 'CREATE ADMIN'
+      bin/add-user.sh -s -u admin -p redhat1! -r ManagementRealm -up {{ JBOSS_HOME }}/domain-dc/configuration/mgmt-users.properties -gp {{ JBOSS_HOME }}/domain-dc/configuration/mgmt-groups.properties
+      # SET HOSTNAME
+      echo 'SET HOSTNAME'
+      sed -i 's/<host /<host name="slave01" /g' {{ JBOSS_HOME }}/domain-slave01/configuration/host-slave.xml
+      sed -i 's/<host /<host name="slave02" /g' {{ JBOSS_HOME }}/domain-slave02/configuration/host-slave.xml
+      # RUN DOMAIN WITH PARAMS
+      echo 'RUN DOMAIN...'
+      nohup bin/domain.sh -Djboss.domain.base.dir=domain-dc --host-config=host-master.xml -Djboss.bind.address={{ IP_BINDING }} -Djboss.bind.address.management={{ IP_BINDING }} -Djboss.node.name=master &
+      nohup bin/domain.sh -Djboss.domain.base.dir=domain-slave01 -Djboss.domain.master.address={{ IP_BINDING }} -Djboss.bind.address={{ IP_BINDING }} -Djboss.bind.address.management={{ IP_BINDING }} -Djboss.socket.binding.port-offset=200 --host-config=host-slave.xml -Djboss.management.native.port=6999 -Djboss.node.name=slave01 &
+      nohup bin/domain.sh -Djboss.domain.base.dir=domain-slave02 -Djboss.domain.master.address={{ IP_BINDING }} -Djboss.bind.address={{ IP_BINDING }} -Djboss.bind.address.management={{ IP_BINDING }} -Djboss.socket.binding.port-offset=300 --host-config=host-slave.xml -Djboss.management.native.port=7999 -Djboss.node.name=slave02 &
+      echo 'END INSTALLATION'
+      echo "SERVER IS RUNNING IN {{ IP_BINDING }} "
+    args:
+      chdir: "{{ JBOSS_HOME }}"
+    register: output
+
+  - debug:
+      var: output
